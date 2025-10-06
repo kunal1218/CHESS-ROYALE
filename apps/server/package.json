@@ -1,0 +1,22 @@
+{
+  "name": "@app/server",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx src/index.ts",
+    "build": "tsc -p tsconfig.json",
+    "start": "node dist/index.js",
+    "clean": "rimraf dist"
+  },
+  "dependencies": {
+    "@pkg/engine": "workspace:*",
+    "@pkg/common": "workspace:*",
+    "socket.io": "^4.7.5"
+  },
+  "devDependencies": {
+    "tsx": "^4.16.2",
+    "typescript": "^5.5.4",
+    "rimraf": "^5.0.5"
+  }
+}

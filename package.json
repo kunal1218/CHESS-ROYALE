@@ -1,0 +1,14 @@
+{
+  "name": "chess-monorepo",
+  "private": true,
+  "workspaces": ["packages/*", "apps/*"],
+  "scripts": {
+    "build": "pnpm -r build",
+    "clean": "pnpm -r clean",
+    "dev:server": "pnpm --filter @app/server dev",
+    "dev:client": "pnpm --filter @app/client dev"
+  },
+  "devDependencies": {
+    "typescript": "^5.5.4"
+  }
+}
