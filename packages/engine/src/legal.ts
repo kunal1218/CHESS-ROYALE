@@ -1,4 +1,5 @@
-import { Board, Coord, at, shallowCloneBoard, key, PieceFlags, toWorldX } from "./board.js";
+// Determines the legality of moves, including checks for check, checkmate, and special move rules.
+import { Board, Coord, at, shallowCloneBoard, key, PieceFlags } from "./board.js";
 import { colorOf, isKing, isKnight, isPawn, isPrince, isRook, knightId, pawnId, princeId } from "./pieces.js";
 import { genPseudo } from "./genmoves.js";
 import { isSquareAttacked } from "./attack.js";
@@ -40,9 +41,6 @@ export function applyMoveShallow(
   if (fp) {
     const dx = to.x - from.x;
     const dy = to.y - from.y;
-    const fromWorldX = toWorldX(b, from);
-    const toWorldXVal = toWorldX(b, to);
-    const worldDx = toWorldXVal - fromWorldX;
     if (isPawn(fp) && ctx.enPassant && to.x === ctx.enPassant.x && to.y === ctx.enPassant.y && !tc.piece) {
       const dir = colorOf(fp) === "w" ? +1 : -1;
       const captureKey = key(to.x, to.y + dir);
@@ -58,11 +56,11 @@ export function applyMoveShallow(
     let fromPiece: string | undefined;
     let fromFlags: PieceFlags | undefined;
 
-    if (isPrince(fp) && Math.abs(worldDx) === 1 && Math.abs(dy) === 1) {
+    if (isPrince(fp) && Math.abs(dx) === 1 && Math.abs(dy) === 1) {
       fromPiece = knightId(moverColor);
       toPiece = pawnId(moverColor);
-      fromFlags = undefined;
-      toFlags = restrictedPawnFlags();
+       fromFlags = undefined;
+       toFlags = restrictedPawnFlags();
     }
 
     if (isKnight(fp)) {

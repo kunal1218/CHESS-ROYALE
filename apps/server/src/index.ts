@@ -1,10 +1,42 @@
+// apps/server/src/index.ts
+import http from "http";
 import { Server, type Socket } from "socket.io";
-import { initialState, reduce, seedStandardPosition, type GameState, type GameResult } from "@pkg/engine";
+import {
+  initialState,
+  reduce,
+  seedStandardPosition,
+  type GameState,
+  type GameResult,
+} from "@pkg/engine";
 import type { Action, Color } from "@pkg/common";
 
-const io = new Server(3001, { cors: { origin: "*" } });
-console.log("Server listening on :3001");
+// --- Networking: Railway/Vercel friendly ------------------------------------
+const port = Number(process.env.PORT) || 3001;
 
+const httpServer = http.createServer((req, res) => {
+  if (req.url === "/health") {
+    res.writeHead(200);
+    res.end("ok");
+    return;
+  }
+  res.writeHead(404);
+  res.end();
+});
+
+const io = new Server(httpServer, {
+  cors: {
+    // In prod, replace "*" with your Vercel origin(s) for tighter security.
+    origin: "*",
+    methods: ["GET", "POST"],
+  },
+  transports: ["websocket", "polling"],
+});
+
+httpServer.listen(port, "0.0.0.0", () => {
+  console.log(`Server listening on :${port}`);
+});
+
+// --- Types -------------------------------------------------------------------
 type PlayerColor = Color;
 type PlayerStatus = "idle" | "waiting" | "playing";
 interface PlayerMeta { color: PlayerColor | null; status: PlayerStatus; }
@@ -14,10 +46,12 @@ interface Match {
   players: { w: Socket | null; b: Socket | null };
 }
 
+// --- State -------------------------------------------------------------------
 let match = createFreshMatch();
 const waiting: Socket[] = [];
 const metas = new Map<string, PlayerMeta>();
 
+// --- Socket.IO wiring --------------------------------------------------------
 io.on("connection", (socket) => {
   console.log("client", socket.id, "connected");
   metas.set(socket.id, { color: null, status: "idle" });
@@ -40,6 +74,7 @@ io.on("connection", (socket) => {
   });
 });
 
+// --- Game / Match helpers ----------------------------------------------------
 function createFreshMatch(): Match {
   const state = initialState();
   seedStandardPosition(state.board);
@@ -155,7 +190,7 @@ function handleAction(socket: Socket, action: Action) {
 
 function concludeMatch(result: GameResult) {
   console.log(`[server] match complete via ${result.method}`);
-  ([("w" as PlayerColor), ("b" as PlayerColor)]).forEach((color) => releasePlayer(color));
+  (["w", "b"] as PlayerColor[]).forEach((color) => releasePlayer(color));
   maybeStartNextMatch();
 }
 
@@ -174,7 +209,7 @@ function handleDisconnect(socket: Socket) {
         ...match.state,
         seq: match.state.seq + 1,
         phase: "complete",
-        result: { winner: opponentColor, method: "disconnect" }
+        result: { winner: opponentColor, method: "disconnect" },
       };
       concludeMatch(match.state.result!);
       sendSnapshot(io);
@@ -188,7 +223,7 @@ function serializeState(gs: GameState) {
     ...gs,
     board: {
       ...gs.board,
-      cells: Object.fromEntries(gs.board.cells.entries())
-    }
+      cells: Object.fromEntries(gs.board.cells.entries()),
+    },
   };
 }
